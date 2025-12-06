@@ -1,0 +1,29 @@
+{
+  "name": "vue-bar-backend",
+  "version": "1.0.0",
+  "description": "app bar backend",
+  "homepage": "https://github.com/Bagix/BarAppBackend#readme",
+  "bugs": {
+    "url": "https://github.com/Bagix/BarAppBackend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bagix/BarAppBackend.git"
+  },
+  "license": "ISC",
+  "author": "Mateusz Boruszczak",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "myserv": "nodemon ./src/backend/server.js"
+  },
+  "dependencies": {
+    "body-parser": "^2.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mongodb": "^7.0.0",
+    "nodemon": "^3.1.11"
+  }
+}
