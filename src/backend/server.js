@@ -1,10 +1,12 @@
 import dotenv from "dotenv";
-dotenv.config();
-
+import multer from "multer";
 import Express from "express";
 import { MongoClient, ObjectId } from "mongodb";
 import cors from "cors";
 import bodyParser from "body-parser";
+import { v2 as cloudinary } from "cloudinary";
+
+dotenv.config();
 
 const app = Express();
 app.use(cors());
@@ -13,8 +15,15 @@ app.use(bodyParser.json());
 
 const port = process.env.PORT || 3000;
 const client = new MongoClient(process.env.CONNECTION_STRING);
+const upload = multer({ storage: multer.memoryStorage() });
 let database, collection;
-let server; // will hold http server instance
+let server;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET_KEY,
+});
 
 async function startServer() {
   try {
@@ -108,14 +117,38 @@ app.get("/api/search", async (req, res) => {
 app.post("/api/add", async (req, res) => {
   try {
     const data = req.body;
+
     if (!data || Object.keys(data).length === 0) {
       return res.status(400).json({ error: "Missing body" });
     }
+
     const response = await add(req.body);
     res.status(201).json(response);
   } catch (err) {
     console.error("POST /api/add error:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/upload-image", upload.single("image"), async (req, res) => {
+  try {
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          { resource_type: "image", folder: "drinks" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        )
+        .end(req.file.buffer);
+    });
+
+    res.json({ url: result.secure_url, public_id: result.public_id });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Image upload failed", message: err.message });
   }
 });
 
@@ -145,6 +178,22 @@ app.delete("/api/delete", async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error("DELETE /api/delete error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/delete-image", async (req, res) => {
+  try {
+    const { public_id } = req.body;
+    if (!public_id) {
+      return res.status(400).json({ error: "Missing public_id in body" });
+    }
+
+    const result = await cloudinary.uploader.destroy(public_id);
+
+    res.json(result);
+  } catch (err) {
+    console.error("DELETE /api/delete-image error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
