@@ -155,15 +155,43 @@ app.post("/api/upload-image", upload.single("image"), async (req, res) => {
 app.put("/api/edit", async (req, res) => {
   try {
     const data = req.body;
-    if (!data || !data.id) {
+    if (!data || !data._id) {
       return res.status(400).json({ error: "Missing id in body" });
     }
 
-    const response = await edit(req.body);
-    res.json(response);
+    await edit(req.body);
+
+    res.json({ message: "Item updated successfully" });
   } catch (err) {
     console.error("PUT /api/edit error:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/edit-image", upload.single("image"), async (req, res) => {
+  try {
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            public_id: req.body.public_id,
+            resource_type: "image",
+            overwrite: true,
+            invalidate: true,
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        )
+        .end(req.file.buffer);
+    });
+
+    res.json({ message: "Image updated successfully" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "Image upload failed", message: err.message });
   }
 });
 
@@ -279,15 +307,15 @@ async function add(data) {
 
 async function edit(data) {
   try {
-    if (!ObjectId.isValid(String(data.id))) {
+    if (!ObjectId.isValid(String(data._id))) {
       throw new Error("Invalid id");
     }
 
     const preparedData = { ...data };
-    delete preparedData.id;
+    delete preparedData._id;
 
     await collection.updateOne(
-      { _id: new ObjectId(`${data.id}`) },
+      { _id: new ObjectId(`${data._id}`) },
       { $set: preparedData }
     );
   } catch (err) {
